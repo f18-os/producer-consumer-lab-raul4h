@@ -16,6 +16,7 @@ def extractFrames(fileName, outputBuffer):
     # read first image
     success,image = vidcap.read()
 
+
     print("Reading frame {} {} ".format(count, success))
     while success:
         # get a jpg encoded frame
@@ -33,15 +34,20 @@ def extractFrames(fileName, outputBuffer):
         count += 1
 
     print("Frame extraction complete")
+    outputBuffer.put("done")
 
 
-def convertToGrayscale(IOBuffer):
+def convertToGrayscale(InputBuffer, OutputBuffer):
     count = 0
 
+    #Get first frame
+    frameAsText = InputBuffer.get()
+
     # go through each frame in the buffer until the buffer is empty
-    while count != 739:
-        # get the next frame
-        frameAsText = IOBuffer.get()
+    while frameAsText != "done":
+
+        if(InputBuffer.empty()):
+            pass
 
         # decode the frame
         jpgRawImage = base64.b64decode(frameAsText)
@@ -62,22 +68,30 @@ def convertToGrayscale(IOBuffer):
         jpgAsText = base64.b64encode(jpgImage)
 
         # add the frame to the buffer
-        IOBuffer.put(jpgAsText)
+        OutputBuffer.put(jpgAsText)
 
         print("Converting frame {}".format(count))
 
         count += 1
 
+        #Get next frame
+        frameAsText = InputBuffer.get()
+
     print("Finished converting all frames")
+    OutputBuffer.put("done")
 
 def displayFrames(inputBuffer):
     # initialize frame count
     count = 0
 
+    # get the first frame
+    frameAsText = inputBuffer.get()
+
     # go through each frame in the buffer until the buffer is empty
-    while not inputBuffer.empty():
-        # get the next frame
-        frameAsText = inputBuffer.get()
+    while frameAsText != "done":
+
+        if(inputBuffer.empty()):
+            pass
 
         # decode the frame
         jpgRawImage = base64.b64decode(frameAsText)
@@ -98,6 +112,9 @@ def displayFrames(inputBuffer):
 
         count += 1
 
+        # get the next frame
+        frameAsText = inputBuffer.get()
+
     print("Finished displaying all frames")
     # cleanup the windows
     cv2.destroyAllWindows()
@@ -108,11 +125,25 @@ filename = 'clip.mp4'
 # shared queue
 extractionQueue = queue.Queue()
 
+#Grayscale Queue
+grayscaleQueue = queue.Queue()
+
+
+#Threads
+extractThread = threading.Thread(target=extractFrames, args=(filename,extractionQueue,))
+grayThread = threading.Thread(target=convertToGrayscale, args=(extractionQueue,grayscaleQueue,))
+displayThread = threading.Thread(target=displayFrames, args=(grayscaleQueue,))
+
+
+extractThread.start()
+grayThread.start()
+displayThread.start()
+
 # extract the frames
-extractFrames(filename,extractionQueue)
-
-#convert the frames
-convertToGrayscale(extractionQueue)
-
-# display the frames
-displayFrames(extractionQueue)
+# extractFrames(filename,extractionQueue)
+#
+# #convert the frames
+# convertToGrayscale(extractionQueue, grayscaleQueue)
+#
+# # display the frames
+# displayFrames(grayscaleQueue)
