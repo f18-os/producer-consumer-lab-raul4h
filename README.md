@@ -1,48 +1,15 @@
-# Producer Consumer Lab
+# producer-consumer-lab-raul4h
 
-For this lab you will implement a trivial producer-consumer system using
-python threads where all coordination is managed by counting and binary
-semaphores for a system of two producers and two consumers. The producers and
-consumers will form a simple rendering pipeline using multiple threads. One
-thread will read frames from a file, a second thread will take those frames
-and convert them to grayscale, and the third thread will display those
-frames. The threads will run concurrently.
+## How To Run The Lab
 
-## File List
-### ExtractFrames.py
-Extracts a series of frames from the video contained in 'clip.mp4' and saves 
-them as jpeg images in sequentially numbered files with the pattern
-'frame_xxxx.jpg'.
+In the command line once in the root folder of this lab please enter:
+* python3 ExtractAndDisplay.py
 
-### ConvertToGrayscale.py
-Loads a series for frams from sequentially numbered files with the pattern
-'frame_xxxx.jpg', converts the grames to grayscale, and saves them as jpeg
-images with the file names 'grayscale_xxxx.jpg'
+## Explanation
 
-### DisplayFrames.py
-Loads a series of frames sequently from files with the names
-'grayscale_xxxx.jpg' and displays them with a 42ms delay.
+In order to convert the video to grayscale and display it in the screen, I had to do three things:
+* Create a method that would take the frames in color and convert them to grayscale
+* Create a new queue that will contain the grayscale images, this in order for the color Queue to not be altered while displaying
+* Create three separate threads for each of the steps in the process to work concurrently
 
-### ExtractAndDisplay.py
-Loads a series of framss from a video contained in 'clip.mp4' and displays 
-them with a 42ms delay
-
-## Requirements
-* Extract frames from a video file, convert them to grayscale, and display
-them in sequence
-* You must have three functions
-  * One function to extract the frames
-  * One function to convert the frames to grayscale
-  * One function to display the frames at the original framerate (24fps)
-* The functions must each execute within their own python thread
-  * The threads will execute concurrently
-  * The order threads execute in may not be the same from run to run
-* Threads will need to signal that they have completed their task
-* Threads must process all frames of the video exactly once
-* Frames will be communicated between threads using producer/consumer idioms
-  * Producer/consumer quesues will be bounded at ten frames
-
-Note: You may have ancillary objects and method in order to make you're code easer to understand and implement.
-
-
-
+Each thread except for the extraction of frames runs infinately until there is a signal from the previous thread that it is done, in the meantime it just waits for input for the previous thread
