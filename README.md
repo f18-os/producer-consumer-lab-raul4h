@@ -5,7 +5,7 @@
 In the command line once in the root folder of this lab please enter:
 * python3 ExtractAndDisplay.py
 
-##Explanation
+## Explanation
 
 In order to convert the video to grayscale and display it in the screen, I had to do three things:
 * Create a method that would take the frames in color and convert them to grayscale
