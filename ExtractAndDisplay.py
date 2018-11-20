@@ -6,12 +6,28 @@ import numpy as np
 import base64
 import queue
 
-def extractFrames(fileName, outputBuffer):
+# filename of clip to load
+filename = 'clip.mp4'
+
+#Maximum size for the buffer
+MAX_SIZE = 10
+
+#Semaphores
+colorSemaphore = threading.Semaphore(MAX_SIZE)
+graySemaphore = threading.Semaphore(MAX_SIZE)
+
+# shared queue
+extractionQueue = queue.Queue(MAX_SIZE)
+
+#Grayscale Queue
+grayscaleQueue = queue.Queue(MAX_SIZE)
+
+def extractFrames():
     # Initialize frame count
     count = 0
 
     # open video file
-    vidcap = cv2.VideoCapture(fileName)
+    vidcap = cv2.VideoCapture(filename)
 
     # read first image
     success,image = vidcap.read()
@@ -27,26 +43,28 @@ def extractFrames(fileName, outputBuffer):
         jpgAsText = base64.b64encode(jpgImage)
 
         # add the frame to the buffer
-        outputBuffer.put(jpgAsText)
+        extractionQueue.put(jpgAsText)
+        colorSemaphore.acquire()
 
         success,image = vidcap.read()
         print('Reading frame {} {}'.format(count, success))
         count += 1
 
     print("Frame extraction complete")
-    outputBuffer.put("done")
+    extractionQueue.put("done")
 
 
-def convertToGrayscale(InputBuffer, OutputBuffer):
+def convertToGrayscale():
     count = 0
 
     #Get first frame
-    frameAsText = InputBuffer.get()
+    frameAsText = extractionQueue.get()
+    colorSemaphore.release()
 
     # go through each frame in the buffer until the buffer is empty
     while frameAsText != "done":
 
-        if(InputBuffer.empty()):
+        if(extractionQueue.empty()):
             pass
 
         # decode the frame
@@ -68,29 +86,33 @@ def convertToGrayscale(InputBuffer, OutputBuffer):
         jpgAsText = base64.b64encode(jpgImage)
 
         # add the frame to the buffer
-        OutputBuffer.put(jpgAsText)
+        grayscaleQueue.put(jpgAsText)
+        graySemaphore.acquire()
 
         print("Converting frame {}".format(count))
 
         count += 1
 
         #Get next frame
-        frameAsText = InputBuffer.get()
+        frameAsText = extractionQueue.get()
+        colorSemaphore.release()
 
     print("Finished converting all frames")
-    OutputBuffer.put("done")
+    grayscaleQueue.put("done")
+    graySemaphore.acquire()
 
-def displayFrames(inputBuffer):
+def displayFrames():
     # initialize frame count
     count = 0
 
     # get the first frame
-    frameAsText = inputBuffer.get()
+    frameAsText = grayscaleQueue.get()
+    graySemaphore.release()
 
     # go through each frame in the buffer until the buffer is empty
     while frameAsText != "done":
 
-        if(inputBuffer.empty()):
+        if(grayscaleQueue.empty()):
             pass
 
         # decode the frame
@@ -113,26 +135,18 @@ def displayFrames(inputBuffer):
         count += 1
 
         # get the next frame
-        frameAsText = inputBuffer.get()
+        frameAsText = grayscaleQueue.get()
+        graySemaphore.release()
 
     print("Finished displaying all frames")
     # cleanup the windows
     cv2.destroyAllWindows()
 
-# filename of clip to load
-filename = 'clip.mp4'
-
-# shared queue
-extractionQueue = queue.Queue()
-
-#Grayscale Queue
-grayscaleQueue = queue.Queue()
-
 
 #Threads
-extractThread = threading.Thread(target=extractFrames, args=(filename,extractionQueue,))
-grayThread = threading.Thread(target=convertToGrayscale, args=(extractionQueue,grayscaleQueue,))
-displayThread = threading.Thread(target=displayFrames, args=(grayscaleQueue,))
+extractThread = threading.Thread(target=extractFrames)
+grayThread = threading.Thread(target=convertToGrayscale)
+displayThread = threading.Thread(target=displayFrames)
 
 
 extractThread.start()
